@@ -12,7 +12,10 @@ admin.initializeApp({
 const app = express();
 const db = admin.firestore();
 
-// Define an endpoint to get game keys
+app.get('/', (req, res) => {
+    res.send('Esta viva! 🥳')
+  })
+
 app.get("/getGames", async (req, res) => {
   try {
     const keysSnapshot = await db.collection("juegos").get();
