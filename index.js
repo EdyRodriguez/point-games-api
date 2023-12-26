@@ -12,6 +12,11 @@ admin.initializeApp({
 
 const app = express();
 const db = admin.firestore();
+app.use(cors(
+  {
+    origin: '*'
+  }
+));
 
 app.get('/', (req, res) => {
     res.send('Esta viva! 🥳')
@@ -34,7 +39,7 @@ app.get("/getGames", async (req, res) => {
 });
 
 app.use(bodyParser.json());
-app.use(cors());
+
 
 app.post("/importGames", async (req, res) => {
   try {
