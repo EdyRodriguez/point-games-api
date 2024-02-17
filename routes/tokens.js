@@ -61,6 +61,30 @@ router.post("/validarToken", async (req, res) => {
   }
 });
 
+router.post("/canjearToken", async (req, res) => {
+    const usuario = req.body.usuario;
+    db.collection("usuarios").doc(usuario).get().then(async (doc) => {
+        if (doc.exists) {
+            const tokens = doc.data().tokens;
+            if (tokens > 0) {
+                db.collection("usuarios").doc(usuario).update({ tokens: tokens - 1 });
+                //aqui va la logica para sacar un juego random de los disponibles y regresarlo al usuario.
+                const juego = await getRandomGame();
+                await registrarJuegoCanjeado(usuario, tokens - 1, juego);
+                res.json(juego);
+            } else {
+                res.status(401).json({ error: "No tienes tokens" });
+            }
+        } else {
+            res.status(404).json({ error: "Usuario no encontrado" });
+        }
+    }).catch((error) => {
+        console.error(error);
+        res.status(500).send("Internal Server Error");
+    }
+    );
+});
+
 async function registrarToken(data, decoded, newTokens) {
   const batch = db.batch();
   const newTransaccionRef = db.collection("transacciones").doc(data.token);
@@ -72,6 +96,32 @@ async function registrarToken(data, decoded, newTokens) {
     descripcion: "Obtuvo: " + decoded.token.cantidad + " token nuevo",
   });
   await batch.commit();
+}
+
+async function registrarJuegoCanjeado(usuario, newTokens, juego){
+    const batch = db.batch();
+  const newTransaccionRef = db.collection("transacciones").doc(jwt.sign({ usuario: usuario, juego: juego.nombre }, passPhrase));
+  batch.set(newTransaccionRef, {
+    usuario: usuario,
+    tokens_restantes: newTokens,
+    fecha: Date.now(),
+    obtencion: false,
+    descripcion: "Obtuvo: " + juego.nombre,
+  });
+  await batch.commit();
+  const batch2 = db.batch();
+  const juegoRef = db.collection("juegos").doc(juego.nombre);
+    batch2.update(juegoRef, { canjeado: true, usuario: usuario });
+    await batch2.commit();
+}
+
+async function getRandomGame(){
+    const juegosDisponibles = await db.collection("juegos").where("canjeado", "==", false).get();
+    const juegos = juegosDisponibles.docs.map((doc) => {
+      const data = doc.data();
+      return data;
+    });
+    return juegos[Math.floor(Math.random() * juegos.length)];
 }
 
 module.exports = router;
