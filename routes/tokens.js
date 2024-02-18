@@ -3,6 +3,7 @@ const router = express.Router();
 require("dotenv").config();
 const db = require("../firebaseConfig");
 router.use(express.json());
+const validacionMiddleware = require("../middlewareAuth");
 const jwt = require("jsonwebtoken");
 const passPhrase = process.env.TokensPassPhraseSecretKey;
 
@@ -61,16 +62,16 @@ router.post("/validarToken", async (req, res) => {
   }
 });
 
-router.post("/canjearToken", async (req, res) => {
+router.post("/canjearToken", validacionMiddleware, async (req, res) => {
     const usuario = req.body.usuario;
     db.collection("usuarios").doc(usuario).get().then(async (doc) => {
         if (doc.exists) {
             const tokens = doc.data().tokens;
             if (tokens > 0) {
-                db.collection("usuarios").doc(usuario).update({ tokens: tokens - 1 });
-                //aqui va la logica para sacar un juego random de los disponibles y regresarlo al usuario.
-                const juego = await getRandomGame();
-                await registrarJuegoCanjeado(usuario, tokens - 1, juego);
+              db.collection("usuarios").doc(usuario).update({ tokens: tokens - 1 });
+              //aqui va la logica para sacar un juego random de los disponibles y regresarlo al usuario.
+              const juego = await getRandomGame();
+              await registrarJuegoCanjeado(usuario, tokens - 1);
                 res.json(juego);
             } else {
                 res.status(401).json({ error: "No tienes tokens" });

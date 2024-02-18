@@ -1,8 +1,9 @@
 const express = require("express");
 const gamesRoutes = require("./routes/games");
 const usersRoutes = require("./routes/users");
-const comprasRoutes = require("./routes/compras");
+const comprasRoutes = require("./routes/transactions");
 const tokensRoutes = require("./routes/tokens");
+const validacionApiKey = require("./middlewareApi");
 const cors = require("cors");
 const app = express();
 
@@ -12,10 +13,10 @@ app.use(
   })
 );
 
-app.use("/games", gamesRoutes);
-app.use("/users", usersRoutes);
-app.use("/compras", comprasRoutes);
-app.use("/tokens", tokensRoutes);
+app.use("/games", validacionApiKey, gamesRoutes);
+app.use("/users", validacionApiKey,  usersRoutes);
+app.use("/compras", validacionApiKey,  comprasRoutes);
+app.use("/tokens", validacionApiKey,  tokensRoutes);
 app.get("/", (req, res) => {
   res.send("Esta viva! 🥳");
 });
