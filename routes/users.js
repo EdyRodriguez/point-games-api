@@ -3,7 +3,9 @@ const router = express.Router();
 require("dotenv").config();
 const db = require("../firebaseConfig");
 const fetch = require("node-fetch");
-
+const jwt = require("jsonwebtoken");
+const validacionMiddleware = require("../middlewareAuth");
+const passPhrase = process.env.TokensPassPhraseSecretKey;
 router.use(express.json());
 
 router.post("/validate", async (req, res) => {
@@ -15,6 +17,11 @@ router.post("/validate", async (req, res) => {
       res.status(finalResponse.status).json({ error: finalResponse.error });
     } else {
       //revisar si el usuario existe en la base de datos
+      const userToken = jwt.sign(
+        { userName: finalResponse.login },
+        passPhrase,
+        { expiresIn: "7d" }
+      );
       const exist = await db
         .collection("usuarios")
         .doc(finalResponse.login)
@@ -22,16 +29,21 @@ router.post("/validate", async (req, res) => {
       if (exist.exists) {
         res.json({
           login: finalResponse.login,
+          userToken: userToken,
           message: "User already exists",
         });
       } else {
         //si no existe, agregarlo
         const batch = db.batch();
         const newUserRef = db.collection("usuarios").doc(finalResponse.login);
-        batch.set(newUserRef, { nombre: finalResponse.login, tokens: 0 });
+        batch.set(newUserRef, {
+          nombre: finalResponse.login,
+          tokens: 0
+        });
         await batch.commit();
         res.json({
           login: finalResponse.login,
+          userToken: userToken,
           message: "User added successfully",
         });
       }
@@ -47,6 +59,28 @@ router.get("/getUserTokens", async (req, res) => {
     const user = await db.collection("usuarios").doc(name).get();
     if (user.exists) {
       res.json({ tokens: user.data().tokens });
+    } else {
+      res.status(404).json({ error: "User not found" });
+    }
+  } else {
+    res.status(401).json({ error: "Unauthorized" });
+  }
+});
+
+router.get("/getUserGames", validacionMiddleware, async (req, res) => {
+  const usuario = req.query.usuario;
+  if (usuario !== "") {
+    const juegosCanjeados = await db
+      .collection("juegos")
+      .where("usuario", "==", usuario)
+      .get();
+      console.log(juegosCanjeados);
+    if (juegosCanjeados.docs.length > 0) {
+      const juegos = juegosCanjeados.docs.map((doc) => {
+        const data = doc.data();
+        return data;
+      });
+      res.json(juegos);
     } else {
       res.status(404).json({ error: "User not found" });
     }
