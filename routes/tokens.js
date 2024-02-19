@@ -71,7 +71,7 @@ router.post("/canjearToken", validacionMiddleware, async (req, res) => {
               db.collection("usuarios").doc(usuario).update({ tokens: tokens - 1 });
               //aqui va la logica para sacar un juego random de los disponibles y regresarlo al usuario.
               const juego = await getRandomGame();
-              await registrarJuegoCanjeado(usuario, tokens - 1);
+              await registrarJuegoCanjeado(usuario, tokens - 1, juego);
                 res.json(juego);
             } else {
                 res.status(401).json({ error: "No tienes tokens" });
