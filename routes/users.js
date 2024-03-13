@@ -33,7 +33,7 @@ router.post("/validate", async (req, res) => {
           login: finalResponse.login,
           userToken: userToken,
           message: "User already exists",
-          profileImege: finalResponse.profile_image_url,
+          profileImage: finalResponse.profile_image_url,
         });
       } else {
         //si no existe, agregarlo
@@ -48,7 +48,7 @@ router.post("/validate", async (req, res) => {
           login: finalResponse.login,
           userToken: userToken,
           message: "User added successfully",
-          profileImege: finalResponse.profile_image_url,
+          profileImage: finalResponse.profile_image_url,
         });
       }
     }
