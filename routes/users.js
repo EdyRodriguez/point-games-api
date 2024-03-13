@@ -11,7 +11,9 @@ router.use(express.json());
 router.post("/validate", async (req, res) => {
   const auth = req.body.auth;
   if (auth !== "") {
-    const finalResponse = await twitchAuth(auth);
+    const validationResponse = await twitchAuth(auth);
+    const finalResponse = await getTwitchUser(validationResponse, auth);
+
 
     if (finalResponse.error) {
       res.status(finalResponse.status).json({ error: finalResponse.error });
@@ -31,6 +33,7 @@ router.post("/validate", async (req, res) => {
           login: finalResponse.login,
           userToken: userToken,
           message: "User already exists",
+          profileImege: finalResponse.profile_image_url,
         });
       } else {
         //si no existe, agregarlo
@@ -38,13 +41,14 @@ router.post("/validate", async (req, res) => {
         const newUserRef = db.collection("usuarios").doc(finalResponse.login);
         batch.set(newUserRef, {
           nombre: finalResponse.login,
-          tokens: 0
+          tokens: 0,
         });
         await batch.commit();
         res.json({
           login: finalResponse.login,
           userToken: userToken,
           message: "User added successfully",
+          profileImege: finalResponse.profile_image_url,
         });
       }
     }
@@ -98,13 +102,29 @@ async function twitchAuth(auth) {
       },
     });
     const data = await response.json();
-
     if (data.status === 401) {
       return { error: "Unauthorized", status: 401 };
     } else {
-      return { login: data.login }; // Retornamos el login como parte de un objeto
+      return data; // Retornamos el login como parte de un objeto
     }
   } catch (error) {
+    return { error: "Internal Server Error", status: 500 };
+  }
+}
+
+async function getTwitchUser(userData, auth) {
+  try {
+    const response = await fetch(`https://api.twitch.tv/helix/users?id=${userData.user_id}`, {
+      method: "GET",
+      headers: {
+        "Client-Id": userData.client_id,
+        Authorization: `Bearer ${auth}`,
+      },
+    });
+    const data = await response.json();
+    return data.data[0];
+  }
+  catch (error) {
     return { error: "Internal Server Error", status: 500 };
   }
 }
